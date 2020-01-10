@@ -4,19 +4,52 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const puppeteer_1 = __importDefault(require("puppeteer"));
+const prompt_sync_1 = __importDefault(require("prompt-sync"));
+const REDDIT_URL = `https://old.reddit.com/`;
 const SUBREDDIT_URL = (reddit) => `https://old.reddit.com/r/${reddit}`;
 exports.self = {
     browser: null,
     page: null,
-    initialize: async (reddit) => {
+    initialize: async () => {
         exports.self.browser = await puppeteer_1.default.launch({
-        //   headless: false
+            headless: false
         });
         exports.self.page = await exports.self.browser.newPage();
+    },
+    login: async (username, password) => {
+        console.log('Here');
+        await exports.self.page.goto(REDDIT_URL, { waitUntil: "networkidle0" });
+        // write in the username and paddword
+        await exports.self.page.type('input[name="user"]', username, { delay: 30 });
+        await exports.self.page.type('input[name="passwd"]', password, { delay: 30 });
+        // click on the login
+        await exports.self.page.click('#login_login-main > div.submit > button');
+        // wait till any of given selectors exist, either logout or error
+        try {
+            await exports.self.page.waitFor('form[id="login_otp"]', { timeout: 5000 });
+            let otp = prompt_sync_1.default()('OTP code :');
+            await exports.self.page.type('input[name="otp"]', otp, { delay: 30 });
+            await exports.self.page.click('#login_otp > div.tfa-login-bottom-panel > div.c-submit-group > button.btn.c-btn.c-btn-primary.tfa-login-submit');
+        }
+        catch (error) {
+            // no otp screen, continue in logging in
+        }
+        await exports.self.page.waitFor('form[action="https://old.reddit.com/logout"],div[class="status error"]');
+        // check if any error
+        let error = await exports.self.page.$('div[class="status error"]');
+        if (error) {
+            let errorMessage = await (await error.getProperty('innerText')).jsonValue();
+            console.log(`${username} failed to logi in`);
+            console.log(`Error from the website: ${errorMessage}`);
+            process.exit(1);
+        }
+        else {
+            console.log(`${username} user now logged in`);
+        }
+    },
+    getResults: async (reddit, nr) => {
         // Go to subreddit
         await exports.self.page.goto(SUBREDDIT_URL(reddit), { waitUntil: "networkidle0" });
-    },
-    getResults: async (nr) => {
         let results = [];
         do {
             let new_results = await exports.self.parseResults();

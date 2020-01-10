@@ -11,10 +11,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/prompt-sync": "^4.1.0",
     "@types/puppeteer": "^2.0.0",
     "nodemon": "^2.0.2"
   },
   "dependencies": {
+    "dotenv": "^8.2.0",
+    "prompt-sync": "^4.2.0",
     "puppeteer": "^2.0.0"
   }
 }
